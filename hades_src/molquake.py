@@ -22,7 +22,10 @@ class molquake_dat:
           #except:
             #print('Catalogue and/or Pick file file not extisitng or not correctly read!')
             #sys.exit()
-          refs=['REFERENCE' for i in range(num.size(reftsp))]
+          nrefshp=num.shape(reftsp)
+          if num.size(nrefshp)>1:
+                nreftsp,mreftsp=nrefshp
+          refs=['REFERENCE' for i in range(num.size(nreftsp))]
           self.refcat=refevs
           self.references=refloc
           self.origin=reforig
