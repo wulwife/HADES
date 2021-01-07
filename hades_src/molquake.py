@@ -25,6 +25,8 @@ class molquake_dat:
           nrefshp=num.shape(reftsp)
           if num.size(nrefshp)>1:
                 nreftsp,mreftsp=nrefshp
+          else:
+                nreftsp=num.size(nrefshp)
           refs=['REFERENCE' for i in range(nreftsp)]
           self.refcat=refevs
           self.references=refloc
