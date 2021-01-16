@@ -43,7 +43,7 @@ def distance_from_tsp(tsp,Vp=4700,Vps=1.73):
     distance=k*tsp
     return distance
 
-if __name__ = "__main__":
+if __name__ == "__main__":
     stations={'sta1':num.array([0,0,0]),
     'sta2':num.array([0,10,0]),
     'sta3':num.array([10,0,0]),
