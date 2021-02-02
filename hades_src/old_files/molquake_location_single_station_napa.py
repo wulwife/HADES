@@ -2,9 +2,10 @@ import molquake
 import matplotlib.pyplot as plt
 import numpy as num
 
+uncertainty=False
 output_path='/Users/francesco/Desktop/Single_Station_Location/MOLQUAKE_V_0.3/napa_data'
 data_path='/Users/francesco/Desktop/Single_Station_Location/MOLQUAKE_V_0.3/napa_data'
-datafiles=['napa_refcat_16_DD.dat','napa_picks_16.dat']
+datafiles=['napa_refcat_4_DD.dat','napa_picks_4.dat']
 catalogue_file='napa_refcat_DD.dat'
 out_catalogue='outcat_napa.txt'
 Vp=6000 #velocities in m/s !!!!!

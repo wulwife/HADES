@@ -137,6 +137,7 @@ class molquake_dat:
                 if toks[0]=='#':
                     continue
                 tp=datetime.datetime.strptime(toks[0], '%Y%m%dT%H%M%S.%f')
+                print(tp)
                 ts=datetime.datetime.strptime(toks[1], '%Y%m%dT%H%M%S.%f')
                 tsp=(ts-tp).total_seconds()
                 evtp.append(tp)
@@ -227,6 +228,11 @@ class molquake_loc:
 
         n_ref,m_ref=num.shape(references)
 
+        #print('----------------\n\n\n')
+        #print(references)
+        #print('----------------\n\n\n')
+        #input()
+
         X=num.array([references[:,0],references[:,1],references[:,2]]).T
         XC=num.mean(X,axis=0)
         D=num.zeros([n_ref,n_ref])
@@ -268,6 +274,7 @@ class molquake_loc:
                 else:
                    distances[i,j]=(num.abs(data[i]-data[j])*kv)
                 distances[j,i]=distances[i,j]
+        print(distances)
         return distances
 
     def distance_calculation_2stations(data, references, Vp, Vs):
@@ -284,6 +291,7 @@ class molquake_loc:
                    dist_sta2=num.abs(data[i,1]-data[j,1])*kv
                    distances[i,j]=num.sqrt(dist_sta1**2+dist_sta2**2)
                 distances[j,i]=distances[i,j]
+        print(distances)
         return distances
 
     def location_2stations(self, data, references):
