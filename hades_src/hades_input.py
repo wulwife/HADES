@@ -105,11 +105,11 @@ class hades_input:
 
 
     def __interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
-        if type(sta)==str:
+        if (type(sta)==str) and (sta in stations.keys()):
             ie_dist=hades_input.__onesta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
         elif type(sta)==list and len(sta)==2:
             ie_dist=hades_input.__twosta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
-        elif type(sta)==list and len(sta)>2:
+        elif (type(sta)==list and len(sta)>2) or sta=='ALL':
             ie_dist=hades_input.__multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations)
         else:
             print('Error in reading the station list for interevent distance')
@@ -141,7 +141,11 @@ class hades_input:
 
     def __multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
 
-        stalist=list(set(tsp_ev1.keys()) & set(tsp_ev2.keys()) & set(sta))
+        if sta=='ALL':
+            stalist=list(set(tsp_ev1.keys()) & set(tsp_ev2.keys()))
+        else:
+            stalist=list(set(tsp_ev1.keys()) & set(tsp_ev2.keys()) & set(sta))
+
         nsta=len(stalist)
 
         # R={}
