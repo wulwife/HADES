@@ -144,11 +144,11 @@ class hades_input:
         stalist=list(set(tsp_ev1.keys()) & set(tsp_ev2.keys()) & set(sta))
         nsta=len(stalist)
 
-        R={}
-        for ista in stalist:
-            r1=(num.abs(tsp_ev1[ista][-1])*kv)**2
-            r2=(num.abs(tsp_ev2[ista][-1])*kv)**2
-            R[ista]=[r1,r2]
+        # R={}
+        # for ista in stalist:
+        #     r1=(num.abs(tsp_ev1[ista][-1])*kv)**2
+        #     r2=(num.abs(tsp_ev2[ista][-1])*kv)**2
+        #     R[ista]=[r1,r2]
 
 
         H=[]; S=[]
@@ -156,7 +156,10 @@ class hades_input:
             sta1=stalist[i]
             for j in range(i+1,nsta):
                 sta2=stalist[j]
-                H.append(((R[sta1][0]-R[sta1][1])-(R[sta2][0]-R[sta2][1]))/2.)
+                dsta1=num.abs((tsp_ev1[sta1][-1])**2-num.abs(tsp_ev2[sta1][-1])**2)
+                dsta2=num.abs((tsp_ev1[sta2][-1])**2-num.abs(tsp_ev2[sta2][-1])**2)
+                H.append(((dsta1-dsta2)*kv**2)/2.)
+                #H.append(((R[sta1][0]-R[sta1][1])-(R[sta2][0]-R[sta2][1]))/2.)
                 S.append([(stations[sta2][0]-stations[sta1][0]),
                         (stations[sta2][1]-stations[sta1][1]),
                         (stations[sta2][2]-stations[sta1][2])])
