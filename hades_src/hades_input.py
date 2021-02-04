@@ -98,19 +98,19 @@ class hades_input:
                 else:
                    tsp_ev1=self.data[events[i]]
                    tsp_ev2=self.data[events[j]]
-                   distances[i,j]=hades_input.__interev_distance(tsp_ev1,tsp_ev2,kv,sta)
+                   distances[i,j]=hades_input.__interev_distance(tsp_ev1,tsp_ev2,kv,sta,self.stations)
                 distances[j,i]=distances[i,j]
         self.distances=distances
         self.events=events
 
 
-    def __interev_distance(tsp_ev1,tsp_ev2,kv,sta):
+    def __interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
         if type(sta)==str:
             ie_dist=hades_input.__onesta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
         elif type(sta)==list and len(sta)==2:
             ie_dist=hades_input.__twosta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
         elif type(sta)==list and len(sta)>2:
-            ie_dist=hades_input.__multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
+            ie_dist=hades_input.__multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations)
         else:
             print('Error in reading the station list for interevent distance')
             sys.exit()
@@ -139,28 +139,40 @@ class hades_input:
             return num.NaN
 
 
-    def __multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta):
+    def __multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
 
-        stalist=list((set(tsp_ev1.keys()) & set(tsp_ev2.keys())) & set(sta))
-
+        stalist=list(set(tsp_ev1.keys()) & set(tsp_ev2.keys()) & set(sta))
         nsta=len(stalist)
 
-        if nsta>=2:
-            ie_dist=[];
-            for i in range(nsta-1):
-                sta1=stalist[i]
-                iedist_sta1=num.abs(tsp_ev1[sta1][-1]-tsp_ev2[sta1][-1])*kv
-                for j in range(i+1,nsta):
-                    sta2=stalist[j]
-                    iedist_sta2=num.abs(tsp_ev1[sta2][-1]-tsp_ev2[sta2][-1])*kv
-                    ie_dist.append(num.sqrt(iedist_sta1**2+iedist_sta2**2))
-            ie_dist=num.mean(num.array(ie_dist))
+        R={}
+        for ista in stalist:
+            r1=(num.abs(tsp_ev1[ista][-1])*kv)**2
+            r2=(num.abs(tsp_ev2[ista][-1])*kv)**2
+            R[ista]=[r1,r2]
 
-            return ie_dist
 
-        else:
+        H=[]; S=[]
+        for i in range(nsta-1):
+            sta1=stalist[i]
+            for j in range(i+1,nsta):
+                sta2=stalist[j]
+                H.append(((R[sta1][0]-R[sta1][1])-(R[sta2][0]-R[sta2][1]))/2.)
+                S.append([(stations[sta2][0]-stations[sta1][0]),
+                        (stations[sta2][1]-stations[sta1][1]),
+                        (stations[sta2][2]-stations[sta1][2])])
 
-            return num.NaN
+        H=num.array(H)
+        S=num.array(S)
+
+        GT=num.dot(S.T,S)
+        Ginv=num.linalg.inv(GT)
+        GG=num.dot(Ginv,S.T)
+        #GG=num.linalg.pinv(S) #pasudo inverse
+        m=num.dot(GG,H)
+        ie_dist=num.sqrt(num.sum(m**2))
+
+        return ie_dist
+
 
 
 # if __name__ == "__main__":
