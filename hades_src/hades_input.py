@@ -105,7 +105,7 @@ class hades_input:
 
 
     def __interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
-        if (type(sta)==str) and (sta in stations.keys()):
+        if (type(sta)==str):
             ie_dist=hades_input.__onesta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
         elif type(sta)==list and len(sta)==2:
             ie_dist=hades_input.__twosta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
@@ -181,12 +181,42 @@ class hades_input:
         return ie_dist
 
 
+    def relative_frame(self,Vp,Vs,sta,y_ref=-1,z_ref=-1,fixed_depth=0):
 
-# if __name__ == "__main__":
-#     hobj1=hades_input('./','Sequenza_KT_2020.csv','stations.txt')
-#     hobj2=hades_input('./','Sequenza_KT_2020.csv','stations.txt')
-#     hobj1.distance_calculation(5000,3000,['FRAE','SEME'],)
-#     hobj2.distance_calculation(5000,3000,['SEME','FRAE','GIZE','MUSE'])
-#     for i in range(len(hobj1.events)):
-#         for j in range(i+1,len(hobj1.events)):
-#             print(hobj1.events[i],hobj1.events[j],'2 sta',hobj1.distances[i,j],'4 sta',hobj2.distances[i,j])
+        kv=(Vp*Vs)/(Vp-Vs)
+        if len(self.refevid)>4:
+            events=self.refevid[0:4]
+        else:
+            events=self.refevid
+
+        d=num.zeros([4,4])
+        for i in range(3):
+            tsp_ev1=self.data[events[i]]
+            for j in range(i+1,4):
+                tsp_ev2=self.data[events[j]]
+                d[i,j]=hades_input.__interev_distance(tsp_ev1,tsp_ev2,kv,sta,self.stations)
+                d[j,i]=d[i,j]
+
+        references=num.zeros([4,3])
+
+        references[0,0]=0.
+        references[0,1]=0.
+        references[0,2]=0.
+
+        references[1,0]=d[0,1]
+        references[1,1]=0.
+        references[1,2]=0.
+
+        references[2,0]=(d[0,2]**2-d[1,2]**2)/(2*references[1,0])+(references[1,0]/2)
+        references[2,1]=y_ref*num.sqrt(d[0,2]**2-references[2,0]**2)
+        references[2,2]=0.
+
+        references[3,0]=(d[0,3]**2-d[1,3]**2)/(2*references[1,0])+(references[1,0]/2)
+        references[3,1]=(d[1,3]**2-d[2,3]**2-(references[3,0]-references[1,0])**2+(references[3,0]-references[2,0])**2)/(2*references[2,1])+(references[2,1]/2)
+
+        if fixed_depth:
+            references[3,2]=fixed_depth*1000.
+        else:
+            references[3,2]=z_ref*num.sqrt(d[0,3]**2-references[3,0]**2-references[3,1]**2)
+        self.references=references
+        self.refevid=events
