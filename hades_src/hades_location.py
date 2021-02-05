@@ -45,6 +45,7 @@ class hades_location:
                 Zi=references[i,2]; Zj=references[j,2];
                 dio=distances[i,event]; djo=distances[j,event];
                 dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
+                #dij=distances[i,j]
                 D[i,j]=(dio**2+djo**2-dij**2)/2.
                 D[j,i]=D[i,j]
 
