@@ -105,7 +105,7 @@ class hades_input:
 
 
     def __interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
-        if (type(sta)==str):
+        if (type(sta)==str) and sta!='ALL':
             ie_dist=hades_input.__onesta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
         elif type(sta)==list and len(sta)==2:
             ie_dist=hades_input.__twosta_interev_distance(tsp_ev1,tsp_ev2,kv,sta)
@@ -150,9 +150,9 @@ class hades_input:
 
         # R={}
         # for ista in stalist:
-        #     r1=(num.abs(tsp_ev1[ista][-1])*kv)**2
-        #     r2=(num.abs(tsp_ev2[ista][-1])*kv)**2
-        #     R[ista]=[r1,r2]
+        #      r1=(num.abs(tsp_ev1[ista][-1])*kv)**2
+        #      r2=(num.abs(tsp_ev2[ista][-1])*kv)**2
+        #      R[ista]=[r1,r2]
 
 
         H=[]; S=[]
@@ -174,7 +174,7 @@ class hades_input:
         GT=num.dot(S.T,S)
         Ginv=num.linalg.inv(GT)
         GG=num.dot(Ginv,S.T)
-        #GG=num.linalg.pinv(S) #pasudo inverse
+        GG=num.linalg.pinv(S) #pasudo inverse
         m=num.dot(GG,H)
         ie_dist=num.sqrt(num.sum(m**2))
 
