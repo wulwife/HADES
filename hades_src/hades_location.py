@@ -9,11 +9,12 @@ km=1000.
 
 class hades_location:
 
+
     def __init__(self, input_obj, output_path):
         self.input=input_obj
         self.output_path=output_path
 
-    def location(self, filename):
+    def location(self, filename, mode):
         distances=(self.input).distances
         references=(self.input).references
         nref,mref=num.shape(references)
@@ -23,9 +24,14 @@ class hades_location:
             references=hades_location.__dgslocator(i_ev, references, distances)
             sys.stdout.flush()
         self.locations=references
-        self.__catalogue_creation(filename)
-        self.__plot_results(filename)
+        if mode=='multi':
+            #add lat lon search
+            self.__absolute_cluster_location(filename)
+        else:
+            self.__catalogue_creation(filename)
+            self.__plot_results(filename)
         sys.stdout.write('\n')
+
 
     def __dgslocator(event, references, distances):
         '''event is the id of the event you want locate
@@ -64,6 +70,49 @@ class hades_location:
         evloc=num.array([Xfin[0], Xfin[1], Xfin[2]])
         references=num.vstack((references,evloc))
         return references
+
+
+    def __absolute_cluster_location(self,filename):
+        #currently only search along strike is implemented
+        Vp=(self.input).vp
+        Vs=(self.input).vs
+        stations=(self.input).stations
+        depth=(self.input).origin[-1]
+        thetas=num.arange(0,41)*0.025*num.pi*2
+        evtsps={}
+        for sta in stations.keys():
+            evtsps[sta]=[]
+            for event in (self.input).events:
+                evtsps[sta].append((self.input).data[event][sta][-1])
+        locs=self.locations
+        kv=(Vp*Vs)/(Vp-Vs)
+        rms_min=1E10
+        rms=0
+        for ysign in [-1,1]:
+            locs[:,1]=ysign*self.locations[:,1]
+            for theta in thetas:
+                loc_rot=(locs[:,0]+1j*locs[:,1])*num.exp(-1j*theta)
+                for sta in stations.keys():
+                    dx=(loc_rot.real-(self.input).stations[sta][0])
+                    dy=(loc_rot.imag-(self.input).stations[sta][1])
+                    dz=((locs[:,2]+depth)-(self.input).stations[sta][2])
+                    tsp_obs=num.array(evtsps[sta])
+                    tsp_obs=tsp_obs/num.max(tsp_obs)
+                    tsp_calc=num.sqrt(dx**2+dy**2+dz**2)/kv
+                    tsp_calc=tsp_calc/num.max(tsp_calc)
+                    rms+=num.sqrt(num.sum((tsp_calc-tsp_obs)**2)/num.size(tsp_obs))
+                rms=rms/len(stations.keys())
+                if rms < rms_min:
+                    rms_min=rms
+                    theta_min=theta
+                    ysign_min=ysign
+            locs_min=(locs[:,0]+1j*ysign_min*locs[:,1])*num.exp(-1j*theta_min)
+            locs[:,0]=locs_min.real
+            locs[:,1]=locs_min.imag
+        self.locations=locs
+        self.__catalogue_creation(filename)
+        self.__plot_results(filename)
+
 
     def __catalogue_creation(self, filename):
         fout=os.path.join(self.output_path,filename)

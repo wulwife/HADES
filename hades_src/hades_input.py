@@ -28,7 +28,11 @@ class hades_input:
         with open(input_file, 'r') as f:
             toks=f.readline().split(';')
             z0,e0,n0=LatLongUTMconversion.LLtoUTM(23, eval(toks[1]), eval(toks[2])) #order lat lon
-            refor=(e0,n0,z0)
+            try:
+                depth0=eval(toks[3])*km
+            except:
+                depth0=0.
+            refor=(e0,n0,z0,depth0)
             refevid=[]
             events=[]
             evtsp={}
@@ -59,7 +63,7 @@ class hades_input:
 
 
     def __read_stafile(input_file,reforig):
-        (e0,n0,z0)=reforig
+        (e0,n0,z0,depth0)=reforig
         stations={}
         with open(input_file, 'r') as f:
             for line in f:
@@ -102,6 +106,8 @@ class hades_input:
                 distances[j,i]=distances[i,j]
         self.distances=distances
         self.events=events
+        self.vp=Vp
+        self.vs=Vs
 
 
     def __interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
