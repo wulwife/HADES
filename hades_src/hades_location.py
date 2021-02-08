@@ -87,19 +87,19 @@ class hades_location:
         locs=self.locations
         kv=(Vp*Vs)/(Vp-Vs)
         rms_min=1E10
-        rms=0
         for ysign in [-1,1]:
             locs[:,1]=ysign*self.locations[:,1]
             for theta in thetas:
                 loc_rot=(locs[:,0]+1j*locs[:,1])*num.exp(-1j*theta)
+                rms=0
                 for sta in stations.keys():
                     dx=(loc_rot.real-(self.input).stations[sta][0])
                     dy=(loc_rot.imag-(self.input).stations[sta][1])
                     dz=((locs[:,2]+depth)-(self.input).stations[sta][2])
                     tsp_obs=num.array(evtsps[sta])
-                    tsp_obs=tsp_obs/num.max(tsp_obs)
+                    tsp_obs=tsp_obs-num.mean(tsp_obs)
                     tsp_calc=num.sqrt(dx**2+dy**2+dz**2)/kv
-                    tsp_calc=tsp_calc/num.max(tsp_calc)
+                    tsp_calc=tsp_calc-num.mean(tsp_calc)
                     rms+=num.sqrt(num.sum((tsp_calc-tsp_obs)**2)/num.size(tsp_obs))
                 rms=rms/len(stations.keys())
                 if rms < rms_min:
