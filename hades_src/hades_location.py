@@ -76,42 +76,50 @@ class hades_location:
         #currently only search along strike is implemented
         Vp=(self.input).vp
         Vs=(self.input).vs
+        kv=(Vp*Vs)/(Vp-Vs)
         stations=(self.input).stations
         depth=(self.input).origin[-1]
         thetas=num.arange(0,41)*0.025*num.pi*2
+        evtsps=self.__initialize_tsp_db(stations)
+        rms_min=1E10
+        zrot=self.locations[:,2]+depth
+        for ysign in [-1,1]:
+            for theta in thetas:
+                crot=(self.locations[:,0]+1j*ysign*self.locations[:,1])*num.exp(-1j*theta)
+                rms=self.__rms_theta_calculation(crot.real,crot.imag,zrot,evtsps,kv,stations)
+                if rms < rms_min:
+                    rms_min=rms
+                    theta_min=theta
+                    ysign_min=ysign
+        crot=(self.locations[:,0]+1j*ysign_min*self.locations[:,1])*num.exp(-1j*theta_min)
+        self.locations[:,0]=crot.real
+        self.locations[:,1]=crot.imag
+        self.locations[:,2]=zrot
+        self.__catalogue_creation(filename)
+        self.__plot_results(filename)
+
+
+    def __rms_theta_calculation(self,xobs,yobs,zobs,evtsps,kv,stations):
+        rms=0
+        for sta in stations.keys():
+            dx=(xobs-(self.input).stations[sta][0])
+            dy=(yobs-(self.input).stations[sta][1])
+            dz=(zobs-(self.input).stations[sta][2])
+            tsp_obs=num.array(evtsps[sta])
+            tsp_obs=tsp_obs-num.mean(tsp_obs)
+            tsp_calc=num.sqrt(dx**2+dy**2+dz**2)/kv
+            tsp_calc=tsp_calc-num.mean(tsp_calc)
+            rms+=num.sqrt(num.sum((tsp_calc-tsp_obs)**2)/num.size(tsp_obs))
+        rms=rms/len(stations.keys())
+        return rms
+
+    def __initialize_tsp_db(self,stations):
         evtsps={}
         for sta in stations.keys():
             evtsps[sta]=[]
             for event in (self.input).events:
                 evtsps[sta].append((self.input).data[event][sta][-1])
-        locs=self.locations
-        kv=(Vp*Vs)/(Vp-Vs)
-        rms_min=1E10
-        for ysign in [-1,1]:
-            locs[:,1]=ysign*self.locations[:,1]
-            for theta in thetas:
-                loc_rot=(locs[:,0]+1j*locs[:,1])*num.exp(-1j*theta)
-                rms=0
-                for sta in stations.keys():
-                    dx=(loc_rot.real-(self.input).stations[sta][0])
-                    dy=(loc_rot.imag-(self.input).stations[sta][1])
-                    dz=((locs[:,2]+depth)-(self.input).stations[sta][2])
-                    tsp_obs=num.array(evtsps[sta])
-                    tsp_obs=tsp_obs-num.mean(tsp_obs)
-                    tsp_calc=num.sqrt(dx**2+dy**2+dz**2)/kv
-                    tsp_calc=tsp_calc-num.mean(tsp_calc)
-                    rms+=num.sqrt(num.sum((tsp_calc-tsp_obs)**2)/num.size(tsp_obs))
-                rms=rms/len(stations.keys())
-                if rms < rms_min:
-                    rms_min=rms
-                    theta_min=theta
-                    ysign_min=ysign
-            locs_min=(locs[:,0]+1j*ysign_min*locs[:,1])*num.exp(-1j*theta_min)
-            locs[:,0]=locs_min.real
-            locs[:,1]=locs_min.imag
-        self.locations=locs
-        self.__catalogue_creation(filename)
-        self.__plot_results(filename)
+        return evtsps
 
 
     def __catalogue_creation(self, filename):
