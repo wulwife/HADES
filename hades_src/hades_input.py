@@ -224,5 +224,17 @@ class hades_input:
             references[3,2]=fixed_depth*1000.
         else:
             references[3,2]=z_ref*num.sqrt(d[0,3]**2-references[3,0]**2-references[3,1]**2)
-        self.references=references
+        self.rel_references=references
+        self.refevid=events
+
+    def relative_frame_from_file(self):
+
+        if len(self.refevid)>4:
+            events=self.refevid[0:4]
+            references=self.references[0:4,:]
+        else:
+            events=self.refevid
+            references=self.references
+
+        self.rel_references=references
         self.refevid=events
