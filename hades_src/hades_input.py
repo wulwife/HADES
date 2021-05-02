@@ -224,6 +224,7 @@ class hades_input:
             references[3,2]=fixed_depth*1000.
         else:
             references[3,2]=z_ref*num.sqrt(d[0,3]**2-references[3,0]**2-references[3,1]**2)
+
         self.rel_references=references
         self.refevid=events
 
@@ -236,5 +237,6 @@ class hades_input:
             events=self.refevid
             references=self.references
 
+        references[:,2]=references[:,2]-self.origin[-1]
         self.rel_references=references
         self.refevid=events
