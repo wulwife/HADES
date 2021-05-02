@@ -16,7 +16,10 @@ class hades_location:
 
     def location(self, filename, mode):
         distances=(self.input).distances
-        references=(self.input).references
+        if mode=='multi':
+            references=(self.input).rel_references
+        else:
+            references=(self.input).references
         nref,mref=num.shape(references)
         nevs,mevs=num.shape(distances)
         for i_ev in range(nref,nevs):
@@ -27,6 +30,9 @@ class hades_location:
         if mode=='multi':
             #add lat lon search
             self.__absolute_cluster_location(filename)
+            references1=(self.input).references
+            references2=(self.input).rel_references
+            print(references1,references2)
         else:
             self.__catalogue_creation(filename)
             self.__plot_results(filename)
@@ -71,7 +77,6 @@ class hades_location:
         references=num.vstack((references,evloc))
         return references
 
-
     def __absolute_cluster_location(self,filename):
         #currently only search along strike is implemented
         Vp=(self.input).vp
@@ -89,9 +94,20 @@ class hades_location:
                 rms=self.__rms_theta_calculation(crot.real,crot.imag,zrot,evtsps,kv,stations)
                 if rms < rms_min:
                     rms_min=rms
-                    theta_min=theta
-                    ysign_min=ysign
-        crot=(self.locations[:,0]+1j*ysign_min*self.locations[:,1])*num.exp(-1j*theta_min)
+                    theta_best=theta
+                    ysign_best=ysign
+        crot=(self.locations[:,0]+1j*ysign_best*self.locations[:,1])*num.exp(-1j*theta_best)
+        self.locations[:,0]=crot.real
+        self.locations[:,1]=crot.imag
+        self.locations[:,2]=zrot
+        pca_max=0
+        for theta in thetas:
+            crot=(self.locations[:,0]+1j*ysign_best*self.locations[:,1])*num.exp(-1j*theta)
+            pca=self.__pca_theta_calculation(crot.real,crot.imag,zrot,evtsps,stations)
+            if pca > pca_max:
+                pca_max=pca
+                theta_best=theta
+        crot=(self.locations[:,0]+1j*self.locations[:,1])*num.exp(-1j*theta_best)
         self.locations[:,0]=crot.real
         self.locations[:,1]=crot.imag
         self.locations[:,2]=zrot
@@ -113,6 +129,26 @@ class hades_location:
         rms=rms/len(stations.keys())
         return rms
 
+    def __pca_theta_calculation(self,xobs,yobs,zobs,evtsps,stations):
+        rect=1
+        for sta in stations.keys():
+            X=num.zeros([num.size(xobs),2])
+            dx=(xobs-(self.input).stations[sta][0])
+            dy=(yobs-(self.input).stations[sta][1])
+            dz=(zobs-(self.input).stations[sta][2])
+            tsp=num.array(evtsps[sta])
+            #tsp=tsp_obs-num.mean(tsp_obs)
+            dist=num.sqrt(dx**2+dy**2+dz**2)
+            ir_dist=num.argsort(dist)
+            X[:,0]=dist[ir_dist]
+            X[:,1]=tsp[ir_dist]
+            M=num.mean(X.T, axis=1)
+            C=X-M
+            V=num.cov(C.T)
+            values, vectors = num.linalg.eig(V)
+            rect=rect*(num.max(values)/num.min(values))
+        return rect
+
     def __initialize_tsp_db(self,stations):
         evtsps={}
         for sta in stations.keys():
@@ -121,6 +157,13 @@ class hades_location:
                 evtsps[sta].append((self.input).data[event][sta][-1])
         return evtsps
 
+    def __cluster_orientation(self):
+        #currently only search along strike is implemented
+        ref=(self.input).references
+        ref1_x=ref[1,0]-ref[0,0]
+        ref1_y=ref[1,1]-ref[0,1]
+        theta1=num.atan2(ref1_y,ref1_x)
+        theta2=num.atan2(ref2_y,ref2_x)
 
     def __catalogue_creation(self, filename):
         fout=os.path.join(self.output_path,filename)
@@ -129,7 +172,7 @@ class hades_location:
         print('Location process completed, number of located events: %d '%(nev))
         catalogue=[]
         with open(filename+'.txt','w') as f:
-            f.write('Id Lat Lon Depth Station(s) Ts-Tp\n')
+            f.write('Id Lat Lon Depth Station(s) Tp Ts-Tp\n')
             for i in range(nev):
                 lat,lon=LatLongUTMconversion.UTMtoLL(23, self.locations[i,1]+(self.input).origin[1], self.locations[i,0]+(self.input).origin[0],(self.input).origin[2])
                 depth=self.locations[i,2]/1000
@@ -138,7 +181,8 @@ class hades_location:
                 for sta in (self.input).sel_sta:
                     if sta in (self.input).data[event].keys():
                         tsp=(self.input).data[event][sta][-1]
-                        t_string=t_string+sta+' %5.3f '%(tsp)
+                        tid=(self.input).data[event][sta][0]
+                        t_string=t_string+sta+' %5.3f '%(tsp)+str(tid)+ ' '
                 f.write(event+' '+'%6.4f '%(lat)+' '+'%6.4f '%(lon)+' '+'%3.1f '%(depth)+' '+t_string+'\n')
                 catalogue.append([event,lat,lon,depth])
         self.catalogue=num.array(catalogue)
@@ -157,7 +201,6 @@ class hades_location:
         for sta in (self.input).stations.keys():
             station=(self.input).stations[sta]
             ax1.scatter(station[0], station[1], c=c2, marker='v', s=200, zorder=3, linewidth=0.5)
-        num.min
         ax1.grid('on')
         ax1.set_aspect('equal')
         fout=os.path.join(self.output_path,filename)
