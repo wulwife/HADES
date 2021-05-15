@@ -131,6 +131,7 @@ class hades_location:
 
     def __pca_theta_calculation(self,xobs,yobs,zobs,evtsps,stations):
         rect=1
+        signs=[]
         for sta in stations.keys():
             X=num.zeros([num.size(xobs),2])
             dx=(xobs-(self.input).stations[sta][0])
@@ -145,8 +146,14 @@ class hades_location:
             M=num.mean(X.T, axis=1)
             C=X-M
             V=num.cov(C.T)
-            values, vectors = num.linalg.eig(V)
+            values, vectors = num.linalg.eigh(V)
+            sign=num.sign(vectors[0,1]*vectors[1,1])
+            signs.append(1*sign)
             rect=rect*(num.max(values)/num.min(values))
+        if signs[0]>0 and signs[1]>0:
+            rect=rect
+        else:
+            rect=-1*rect
         return rect
 
     def __initialize_tsp_db(self,stations):
