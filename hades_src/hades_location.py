@@ -13,8 +13,11 @@ class hades_location:
     def __init__(self, input_obj, output_path):
         self.input=input_obj
         self.output_path=output_path
+        
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
 
-    def location(self, filename, mode):
+    def location(self, filename, mode=None):
         distances=(self.input).distances
         if mode=='multi':
             references=(self.input).rel_references
@@ -171,7 +174,7 @@ class hades_location:
         evids=(self.input).events
         print('Location process completed, number of located events: %d '%(nev))
         catalogue=[]
-        with open(filename+'.txt','w') as f:
+        with open(fout+'.txt','w') as f:
             f.write('Id Lat Lon Depth Station(s) Tp Ts-Tp\n')
             for i in range(nev):
                 lat,lon=LatLongUTMconversion.UTMtoLL(23, self.locations[i,1]+(self.input).origin[1], self.locations[i,0]+(self.input).origin[0],(self.input).origin[2])
