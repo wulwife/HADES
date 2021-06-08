@@ -44,7 +44,7 @@ class hades_input:
                     evtsp[evid]={}
                     evdate=toks[1][0:10]
                     if toks[0][1]=='R':
-                        z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[2]), eval(toks[3])) # order lat lon
+                        z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[2]), eval(toks[3]), z0) # order lat lon
                         depth=eval(toks[4])*km
                         refevid.append(evid)
                         references.append([e-e0,n-n0,depth])
@@ -69,7 +69,7 @@ class hades_input:
             for line in f:
                 toks=line.split()
                 sta=toks[0]
-                z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[1]), eval(toks[2])) #order lat lon
+                z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[1]), eval(toks[2]), z0) #order lat lon
                 elev=eval(toks[3])*km
                 if z==z0:
                     stations[sta]=[e-e0,n-n0,elev]
