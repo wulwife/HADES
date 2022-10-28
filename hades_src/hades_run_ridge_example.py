@@ -15,10 +15,10 @@ mode='classic'
 if mode=='classic':
     hobj.distance_calculation(Vp,Vs,stations)
     hloc=hades_location(hobj,output_folder)
-    hloc.location(hobj,output_folder,master=False,fixed=False)
+    hloc.location(hobj,master=False,fixed=False)
 elif mode=='master':
     hobj.relative_frame(Vp,Vs,stations,y_ref=-1,z_ref=-1,fixed_depth=1)
     hobj.distance_calculation(Vp,Vs,stations)
-    hloc=hades_location(hobj,output_folder,master=True,fixed=False)
+    hloc=hades_location(hobj,master=True,fixed=False)
 else:
     print('mode must be "classic" or "master"!!!')
