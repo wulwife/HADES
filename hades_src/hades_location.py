@@ -17,9 +17,9 @@ class hades_location:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
-    def location(self, filename, mode=None):
+    def location(self, filename, master=False, fixed=False):
         distances=(self.input).distances
-        if mode=='multi':
+        if master:
             references=(self.input).rel_references
         else:
             references=(self.input).references
@@ -27,10 +27,10 @@ class hades_location:
         nevs,mevs=num.shape(distances)
         for i_ev in range(nref,nevs):
             sys.stdout.write(' Locating events %3d %% \r' %((i_ev/nevs)*100))
-            references=hades_location.__dgslocator(i_ev, references, distances)
+            references=hades_location.__dgslocator(i_ev, references, distances, fixed)
             sys.stdout.flush()
         self.locations=references
-        if mode=='multi':
+        if master:
             #add lat lon search
             self.__absolute_cluster_location(filename)
             references1=(self.input).references
@@ -42,7 +42,7 @@ class hades_location:
         sys.stdout.write('\n')
 
 
-    def __dgslocator(event, references, distances):
+    def __dgslocator(event, references, distances, fixed):
         '''event is the id of the event you want locate
         references is an object array of the form ['eventid',x,y,z]
         this method returns the event location and the updated the reference locations
@@ -59,8 +59,10 @@ class hades_location:
                 Yi=references[i,1]; Yj=references[j,1];
                 Zi=references[i,2]; Zj=references[j,2];
                 dio=distances[i,event]; djo=distances[j,event];
-                dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
-                #dij=distances[i,j]
+                if fixed:
+                    dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
+                else:
+                    dij=distances[i,j]
                 D[i,j]=(dio**2+djo**2-dij**2)/2.
                 D[j,i]=D[i,j]
 

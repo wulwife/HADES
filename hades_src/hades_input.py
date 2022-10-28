@@ -230,12 +230,12 @@ class hades_input:
             for x in xax:
                 for y in yax:
                     for z in zax:
-                        error=num.sum(num.sqrt((references[:,0]-x)**2+(references[i,1]-y)**2+(references[:][2]-z)**2))
+                        error=num.sum(num.sqrt((references[0:3,0]-x)**2+(references[0:3,1]-y)**2+(references[0:3,2]-z)**2))
                         if error<errmin:
                             errmin=error
                             references[3,0]=x
-                            references[3,2]=y
-                            references[3,3]=z
+                            references[3,1]=y
+                            references[3,2]=z
 
         self.rel_references=references
         self.refevid=events
