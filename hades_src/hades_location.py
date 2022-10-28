@@ -173,7 +173,7 @@ class hades_location:
         ref1_x=ref[1,0]-ref[0,0]
         ref1_y=ref[1,1]-ref[0,1]
         theta1=num.atan2(ref1_y,ref1_x)
-        theta2=num.atan2(ref2_y,ref2_x)
+        #theta2=num.atan2(ref2_y,ref2_x)
 
     def __catalogue_creation(self, filename):
         fout=os.path.join(self.output_path,filename)
