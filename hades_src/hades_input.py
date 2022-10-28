@@ -30,10 +30,10 @@ class hades_input:
             latref,lonref=eval(toks[1]),eval(toks[2])
             orig=latlon2cart.Coordinates(latref,lonref,0)
             try:
-                depth0=eval(toks[3])*km
+                depthref=eval(toks[3])*km
             except:
-                depth0=0.
-            refor=(e0,n0,z0,depth0)
+                depthref=0.
+            refor=(latref,lonref,depthref)
             refevid=[]
             events=[]
             evtsp={}
@@ -48,7 +48,7 @@ class hades_input:
                         e,n,z = orig.geo2cart(eval(toks[2]), eval(toks[3]),0)
                         depth=eval(toks[4])*km
                         refevid.append(evid)
-                        references.append([e-e0,n-n0,depth])
+                        references.append([e,n,depth])
                     else:
                         events.append(evid)
                 else:
@@ -63,8 +63,8 @@ class hades_input:
         return references,refevid,evtsp,refor,events
 
 
-    def __read_stafile(input_file,reforig):
-        (e0,n0,z0,depth0)=reforig
+    def __read_stafile(input_file,refor):
+        (latref,lonref,depthref)=refor
         orig=latlon2cart.Coordinates(latref,lonref,0)
         stations={}
         with open(input_file, 'r') as f:
@@ -73,11 +73,7 @@ class hades_input:
                 sta=toks[0]
                 e,n,z = orig.geo2cart(eval(toks[1]), eval(toks[2]),0)
                 elev=eval(toks[3])*km
-                if z==z0:
-                    stations[sta]=[e-e0,n-n0,elev]
-                else:
-                    print('cluster and stations are in different UTM zones')
-                    sys.exit()
+                stations[sta]=[e,n,elev]
         return stations
 
 
@@ -219,13 +215,27 @@ class hades_input:
         references[2,1]=y_ref*num.sqrt(d[0,2]**2-references[2,0]**2)
         references[2,2]=0.
 
-        references[3,0]=(d[0,3]**2-d[1,3]**2)/(2*references[1,0])+(references[1,0]/2)
-        references[3,1]=(d[1,3]**2-d[2,3]**2-(references[3,0]-references[1,0])**2+(references[3,0]-references[2,0])**2)/(2*references[2,1])+(references[2,1]/2)
-
         if fixed_depth:
+            references[3,0]=(d[0,3]**2-d[1,3]**2)/(2*references[1,0])+(references[1,0]/2)
+            references[3,1]=(d[1,3]**2-d[2,3]**2-(references[3,0]-references[1,0])**2+(references[3,0]-references[2,0])**2)/(2*references[2,1])+(references[2,1]/2)
             references[3,2]=fixed_depth*1000.
         else:
-            references[3,2]=z_ref*num.sqrt(d[0,3]**2-references[3,0]**2-references[3,1]**2)
+            dmax=num.max(d[:,3])
+            xmax=num.max(num.abs(references[:,0]))+dmax
+            ymax=num.max(num.abs(references[:,1]))+dmax
+            xax=-xmax+((num.arange(100)*0.01)*2*xmax)
+            yax=-ymax+((num.arange(100)*0.01)*2*ymax)
+            zax=((num.arange(50)*0.02)*dmax)
+            errmin=1E10
+            for x in xax:
+                for y in yax:
+                    for z in zax:
+                        error=num.sum(num.sqrt((references[:,0]-x)**2+(references[i,1]-y)**2+(references[:][2]-z)**2))
+                        if error<errmin:
+                            errmin=error
+                            references[3,0]=x
+                            references[3,2]=y
+                            references[3,3]=z
 
         self.rel_references=references
         self.refevid=events
