@@ -1,6 +1,6 @@
 import numpy as num
 import datetime
-import LatLongUTMconversion
+import latlon2cart
 import os
 import sys
 
@@ -27,7 +27,8 @@ class hades_input:
     def __read_evfile(input_file):
         with open(input_file, 'r') as f:
             toks=f.readline().split(';')
-            z0,e0,n0=LatLongUTMconversion.LLtoUTM(23, eval(toks[1]), eval(toks[2])) #order lat lon
+            latref,lonref=eval(toks[1]),eval(toks[2])
+            orig=latlon2cart.Coordinates(latref,lonref,0)
             try:
                 depth0=eval(toks[3])*km
             except:
@@ -44,7 +45,7 @@ class hades_input:
                     evtsp[evid]={}
                     evdate=toks[1][0:10]
                     if toks[0][1]=='R':
-                        z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[2]), eval(toks[3]), z0) # order lat lon
+                        e,n,z = orig.geo2cart(eval(toks[2]), eval(toks[3]),0)
                         depth=eval(toks[4])*km
                         refevid.append(evid)
                         references.append([e-e0,n-n0,depth])
@@ -64,12 +65,13 @@ class hades_input:
 
     def __read_stafile(input_file,reforig):
         (e0,n0,z0,depth0)=reforig
+        orig=latlon2cart.Coordinates(latref,lonref,0)
         stations={}
         with open(input_file, 'r') as f:
             for line in f:
                 toks=line.split()
                 sta=toks[0]
-                z,e,n=LatLongUTMconversion.LLtoUTM(23, eval(toks[1]), eval(toks[2]), z0) #order lat lon
+                e,n,z = orig.geo2cart(eval(toks[1]), eval(toks[2]),0)
                 elev=eval(toks[3])*km
                 if z==z0:
                     stations[sta]=[e-e0,n-n0,elev]
