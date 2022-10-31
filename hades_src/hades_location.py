@@ -207,7 +207,7 @@ class hades_location:
         nev,mev=num.shape(self.locations)
         evids=(self.input).events
         latref,lonref=(self.input).origin[0],(self.input).origin[1]
-        print('Location process completed, number of located events: %d '%(nev))
+        print('Catalogues generated')
         catalogue_cart=[]
         with open(fout+'cartesian.txt','w') as f:
             f.write('Id X Y Z Station(s) Tp Ts-Tp\n')
