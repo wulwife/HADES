@@ -201,6 +201,30 @@ class hades_location:
                 catalogue.append([event,lat,lon,depth])
         self.catalogue=num.array(catalogue)
 
+    def __catalogue_creation_cartesian(self, filename):
+        fout=os.path.join(self.output_path,filename)
+        nev,mev=num.shape(self.locations)
+        evids=(self.input).events
+        latref,lonref=(self.input).origin[0],(self.input).origin[1]
+        print('Location process completed, number of located events: %d '%(nev))
+        catalogue_cart=[]
+        with open(fout+'.txt','w') as f:
+            f.write('Id X Y Z Station(s) Tp Ts-Tp\n')
+            f.write('Ref Lat :' + str(latref) + ', Ref Lon :'+ str(lonref) + '\n')
+            for i in range(nev):
+                x,y_=self.locations[i,0]/1000,self.locations[i,1]/1000
+                depth=self.locations[i,2]/1000
+                event=evids[i]
+                t_string=' '
+                for sta in (self.input).sel_sta:
+                    if sta in (self.input).data[event].keys():
+                        tsp=(self.input).data[event][sta][-1]
+                        tid=(self.input).data[event][sta][0]
+                        t_string=t_string+sta+' %5.3f '%(tsp)+str(tid)+ ' '
+                f.write(event+' '+'%6.3f '%(x)+' '+'%6.3f '%(y)+' '+'%3.1f '%(depth)+' '+t_string+'\n')
+                catalogue_cart.append([event,x,y,depth])
+        self.catalogue_cart=num.array(catalogue_cart)
+
 
     def __plot_results(self, filename):
         c1='#4285F4'

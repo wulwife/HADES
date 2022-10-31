@@ -202,40 +202,26 @@ class hades_input:
                 d[j,i]=d[i,j]
 
         references=num.zeros([4,3])
-
         references[0,0]=0.
         references[0,1]=0.
         references[0,2]=0.
-
+                
         references[1,0]=d[0,1]
         references[1,1]=0.
         references[1,2]=0.
-
+                
         references[2,0]=(d[0,2]**2-d[1,2]**2)/(2*references[1,0])+(references[1,0]/2)
         references[2,1]=y_ref*num.sqrt(d[0,2]**2-references[2,0]**2)
         references[2,2]=0.
 
+        references[3,0]=(d[0,3]**2-d[1,3]**2)/(2*references[1,0])+(references[1,0]/2)
+        references[3,1]=(d[1,3]**2-d[2,3]**2-(references[3,0]-references[1,0])**2+(references[3,0]-references[2,0])**2)/(2*references[2,1])+(references[2,1]/2)
+
         if fixed_depth:
-            references[3,0]=(d[0,3]**2-d[1,3]**2)/(2*references[1,0])+(references[1,0]/2)
-            references[3,1]=(d[1,3]**2-d[2,3]**2-(references[3,0]-references[1,0])**2+(references[3,0]-references[2,0])**2)/(2*references[2,1])+(references[2,1]/2)
-            references[3,2]=fixed_depth*1000.
+            references[3,2]=fixed_depth*1000
         else:
-            dmax=num.max(d[:,3])
-            xmax=num.max(num.abs(references[:,0]))+dmax
-            ymax=num.max(num.abs(references[:,1]))+dmax
-            xax=-xmax+((num.arange(100)*0.01)*2*xmax)
-            yax=-ymax+((num.arange(100)*0.01)*2*ymax)
-            zax=((num.arange(50)*0.02)*dmax)
-            errmin=1E10
-            for x in xax:
-                for y in yax:
-                    for z in zax:
-                        error=num.sum(num.sqrt((references[0:3,0]-x)**2+(references[0:3,1]-y)**2+(references[0:3,2]-z)**2))
-                        if error<errmin:
-                            errmin=error
-                            references[3,0]=x
-                            references[3,1]=y
-                            references[3,2]=z
+            references[3,2]=z_ref*num.sqrt(d[0,3]**2-references[3,0]**2-references[3,1]**2)
+
 
         self.rel_references=references
         self.refevid=events
