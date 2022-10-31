@@ -38,7 +38,7 @@ class hades_location:
             print(references1,references2)
         else:
             self.__catalogue_creation(filename)
-            self.__catalogue_creation_cartesian(self, filename)
+            self.__catalogue_creation_cartesian(filename)
             self.__plot_results(filename)
         sys.stdout.write('\n')
 
