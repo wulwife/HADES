@@ -38,6 +38,7 @@ class hades_location:
             print(references1,references2)
         else:
             self.__catalogue_creation(filename)
+            self.__catalogue_creation_cartesian(self, filename)
             self.__plot_results(filename)
         sys.stdout.write('\n')
 
@@ -208,11 +209,11 @@ class hades_location:
         latref,lonref=(self.input).origin[0],(self.input).origin[1]
         print('Location process completed, number of located events: %d '%(nev))
         catalogue_cart=[]
-        with open(fout+'.txt','w') as f:
+        with open(fout+'cartesian.txt','w') as f:
             f.write('Id X Y Z Station(s) Tp Ts-Tp\n')
             f.write('Ref Lat :' + str(latref) + ', Ref Lon :'+ str(lonref) + '\n')
             for i in range(nev):
-                x,y_=self.locations[i,0]/1000,self.locations[i,1]/1000
+                x,y=self.locations[i,0]/1000,self.locations[i,1]/1000
                 depth=self.locations[i,2]/1000
                 event=evids[i]
                 t_string=' '
