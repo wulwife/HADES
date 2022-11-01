@@ -17,7 +17,7 @@ class hades_location:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
-    def location(self, filename, master=False, fixed=False):
+    def location(self, filename, master=False, fixed_ref=False):
         distances=(self.input).distances
         if master:
             references=(self.input).rel_references
@@ -27,23 +27,24 @@ class hades_location:
         nevs,mevs=num.shape(distances)
         for i_ev in range(nref,nevs):
             sys.stdout.write(' Locating events %3d %% \r' %((i_ev/nevs)*100))
-            references=hades_location.__dgslocator(i_ev, references, distances, fixed)
+            references=hades_location.__dgslocator(i_ev, references, distances, fixed_ref)
             sys.stdout.flush()
         self.locations=references
         if master:
             #add lat lon search
-            self.__absolute_cluster_location(filename)
+            #self.__absolute_cluster_location(filename)
             references1=(self.input).references
             references2=(self.input).rel_references
-            print(references1,references2)
+            #print(references1,references2)
+            self.__catalogue_creation_cartesian(filename)
         else:
             self.__catalogue_creation(filename)
             self.__catalogue_creation_cartesian(filename)
-            self.__plot_results(filename)
+        self.__plot_results(filename)
         sys.stdout.write('\n')
 
 
-    def __dgslocator(event, references, distances, fixed):
+    def __dgslocator(event, references, distances, fixed_ref):
         '''event is the id of the event you want locate
         references is an object array of the form ['eventid',x,y,z]
         this method returns the event location and the updated the reference locations
@@ -60,7 +61,7 @@ class hades_location:
                 Yi=references[i,1]; Yj=references[j,1];
                 Zi=references[i,2]; Zj=references[j,2];
                 dio=distances[i,event]; djo=distances[j,event];
-                if fixed:
+                if fixed_ref:
                     dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
                 else:
                     dij=distances[i,j]
