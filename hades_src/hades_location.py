@@ -244,4 +244,4 @@ class hades_location:
         ax1.grid('on')
         ax1.set_aspect('equal')
         fout=os.path.join(self.output_path,filename)
-        plt.savefig(fout+'.eps')
+        plt.savefig(fout+'.pdf')
