@@ -44,11 +44,14 @@ class hades_location:
         sys.stdout.write('\n')
 
 
-    def __dgslocator(event, references, distances, fixed_ref):
+    def __dgslocator(event, references, distances, fixed_dist=True):
         '''event is the id of the event you want locate
         references is an object array of the form ['eventid',x,y,z]
         this method returns the event location and the updated the reference locations
-        that include the new event located'''
+        that include the new event located
+        fixed distances means that the inter-event distances will not change during the relocation
+        process (i.e. the input distance matrix remain freezed). if fixed_dist is false at each reloaction
+        new inter-event distances will be recalculated from the new reloacted events'''
 
         n_ref,m_ref=num.shape(references)
 
@@ -61,10 +64,10 @@ class hades_location:
                 Yi=references[i,1]; Yj=references[j,1];
                 Zi=references[i,2]; Zj=references[j,2];
                 dio=distances[i,event]; djo=distances[j,event];
-                if fixed_ref:
-                    dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
-                else:
+                if fixed_dist:
                     dij=distances[i,j]
+                else:
+                    dij=num.sqrt((Xi-Xj)**2+(Yi-Yj)**2+(Zi-Zj)**2)
                 D[i,j]=(dio**2+djo**2-dij**2)/2.
                 D[j,i]=D[i,j]
 
