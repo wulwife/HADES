@@ -9,6 +9,6 @@ stations='CVS'  #['WBS','WMF']
 Vp=6000
 Vs=Vp/1.73
 hobj=hades_input(data_path,input_file,sta_file)
-hobj.distance_calculation(Vp,Vs,stations)
+hobj.distance_calculation(Vp,Vs,stations,refcat='tsp')
 hloc=hades_location(hobj,'./NAPA/')
 hloc.location(out_file)

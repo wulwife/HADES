@@ -77,7 +77,7 @@ class hades_input:
         return stations
 
 
-    def distance_calculation(self, Vp, Vs, sta):
+    def distance_calculation(self, Vp, Vs, sta, refcat='tsp'):
         ''' This method calculates the inter-event distance matrix
         for the entire dataset. Input: It requires the P and S wave velocities and
         the station name. For single station mode sta need to be  string with the name of the
@@ -95,7 +95,7 @@ class hades_input:
         kv=(Vp*Vs)/(Vp-Vs)
         for i in range(nevs-1):
             for j in range(i+1,nevs):
-                if (i<nref) and (j<nref):
+                if (i<nref) and (j<nref) and refcat=='catalog':
                    distances[i,j]=num.sqrt((evrefs[i][0]-evrefs[j][0])**2+(evrefs[i][1]-evrefs[j][1])**2+(evrefs[i][2]-evrefs[j][2])**2)
                 else:
                    tsp_ev1=self.data[events[i]]
