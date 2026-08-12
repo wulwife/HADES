@@ -17,7 +17,7 @@ class hades_location:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
-    def location(self, filename, master=False, fixed_ref=False):
+    def location(self, filename, master=False, fixed_dist=True):
         distances=(self.input).distances
         if master:
             references=(self.input).rel_references
