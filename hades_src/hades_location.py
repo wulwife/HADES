@@ -27,7 +27,7 @@ class hades_location:
         nevs,mevs=num.shape(distances)
         for i_ev in range(nref,nevs):
             sys.stdout.write(' Locating events %3d %% \r' %((i_ev/nevs)*100))
-            references=hades_location.__dgslocator(i_ev, references, distances, fixed_ref)
+            references=hades_location.__dgslocator(i_ev, references, distances, fixed_dist)
             sys.stdout.flush()
         self.locations=references
         if master:
