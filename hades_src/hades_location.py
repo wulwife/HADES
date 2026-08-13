@@ -17,29 +17,43 @@ class hades_location:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
-    def location(self, filename, master=False, fixed_dist=True):
+    def location(self, filename, joint=False, fixed_dist=True, anchor=None):
+        # joint              : bool, replace the incremental dgslocator loop
+        #                     with a single classical-MDS solve on the full
+        #                     distance matrix (masters included). Requires
+        #                     distance_calculation(..., refmode='tsp') or the
+        #                     master-master distances are still frozen to the
+        #                     catalogue and this has no effect on them.
+        #                     the referenece is the first index element in
+        #                     references
+        # anchor              : int or None. If given, after the above, the
+        #                     whole located cluster is rigidly rotated (and
+        #                     optionally mirrored) about a SINGLE reference
+        #                     event (index `anchor` among the masters) to
+        #                     best fit the observed ts-tp at every station
+        #                     simultaneously. See __anchor_and_orient below.
+        # None of this runs unless explicitly requested: with the defaults
+        # (update_references=0, joint=False, anchor=None) this method is
+        # byte-for-byte the original location().
+        references=(self.input).references
         distances=(self.input).distances
-        if master:
-            references=(self.input).rel_references
-        else:
-            references=(self.input).references
         nref,mref=num.shape(references)
         nevs,mevs=num.shape(distances)
-        for i_ev in range(nref,nevs):
-            sys.stdout.write(' Locating events %3d %% \r' %((i_ev/nevs)*100))
-            references=hades_location.__dgslocator(i_ev, references, distances, fixed_dist)
-            sys.stdout.flush()
-        self.locations=references
-        if master:
-            #add lat lon search
-            #self.__absolute_cluster_location(filename)
-            references1=(self.input).references
-            references2=(self.input).rel_references
-            #print(references1,references2)
-            self.__catalogue_creation_cartesian(filename)
+        nmaster=num.shape(references)[0]
+        if joint:                                                       
+            self.locations=self.__joint_relocation(nmaster, references, distances)
+            self.__anchor_and_orient(0, demean=True, mirror=True, flip_z=False)
         else:
-            self.__catalogue_creation(filename)
-            self.__catalogue_creation_cartesian(filename)
+            for i_ev in range(nref,nevs):
+                sys.stdout.write(' Locating events %3d %% \r' %((i_ev/nevs)*100))
+                references=hades_location.__dgslocator(i_ev, references, distances, fixed_dist)
+                sys.stdout.flush()
+            self.locations=references
+
+        if anchor is not None:
+            self.__anchor_and_orient(anchor, demean=True, mirror=True, flip_z=False)
+        self.__catalogue_creation(filename)
+        self.__catalogue_creation_cartesian(filename)
         self.__plot_results(filename)
         sys.stdout.write('\n')
 
@@ -86,6 +100,153 @@ class hades_location:
         evloc=num.array([Xfin[0], Xfin[1], Xfin[2]])
         references=num.vstack((references,evloc))
         return references
+
+    def __joint_relocation(self, nmaster, references, distances):
+        '''Locates ALL the events - masters included - with a single
+        classical (Torgerson) MDS on the full n x n distance matrix, instead
+        of the incremental dgslocator loop.
+
+        Classical scaling honours every one of the n(n-1)/2 pairwise
+        distances at once (it minimises the Frobenius norm between the
+        observed and the reproduced Gram matrix), so this is the
+        maximum-internal-consistency solution for the whole dataset: no
+        event, master included, is treated differently from any other.
+
+        The MDS configuration is only defined up to an arbitrary
+        translation, rotation and reflection. That gauge freedom is removed
+        by rigidly fitting (Procrustes, no rescaling) the nmaster embedded
+        master points onto the master reference coordinates (`references`,
+        i.e. self.input.references or self.input.rel_references), and
+        applying the SAME rigid transform to every event. The residual left
+        on each master after that fit is not solver noise: it is the part
+        of the mismatch between the a-priori master coordinates and the
+        observed ts-tp pattern that no rigid motion can remove.
+
+        Requires distance_calculation(..., refmode='tsp'): otherwise the
+        master-master block of `distances` is still the catalogue distances
+        and the masters will simply be reproduced exactly, hiding any real
+        inconsistency instead of showing it.
+        '''
+        D=distances
+        n=num.shape(D)[0]
+
+        J=num.eye(n)-num.ones((n,n))/n
+        B=-0.5*num.dot(J,num.dot(D**2,J))
+        B=(B+B.T)/2.
+        w,v=num.linalg.eigh(B)
+        order=num.argsort(w)[::-1]
+        w=w[order]; v=v[:,order]
+        neg=num.sum(w[0:3]<0)
+        w3=num.clip(w[0:3],0,None)
+        if num.sum(w3>0)<3 or (w[2]>0 and w[0]/max(w[2],1e-12)>1e4):
+            sys.stdout.write(' [warn] distance matrix close to rank 2: with two '
+                             'stations only two directions per event are '
+                             'independently observed, the third comes only from '
+                             'the master alignment below\n')
+        if neg>0:
+            sys.stdout.write(' [warn] %d negative eigenvalue(s) in the MDS solution '
+                             '(non-Euclidean distance matrix - noisy/inconsistent '
+                             'picks); clipped to zero\n'%neg)
+        Y=v[:,0:3]*num.sqrt(w3)
+
+        X=references[0:nmaster,:]
+        Ym=Y[0:nmaster,:]
+        XC=num.mean(X,axis=0); YC=num.mean(Ym,axis=0)
+        U1,S1,V1=num.linalg.svd(num.dot((X-XC).T,(Ym-YC)),full_matrices=True)
+        Q=num.dot(U1,V1)
+        Yall=num.dot(Q,(Y-YC).T).T+XC
+
+        resid=num.sqrt(num.sum((Yall[0:nmaster,:]-X)**2,axis=1))
+        for k in range(nmaster):
+            sys.stdout.write(' Master %d residual after joint fit: %8.1f m\n'%(k,resid[k]))
+        sys.stdout.write(' Joint relocation: %d events, master residual rms %8.1f m, max %8.1f m\n'
+                         %(n,num.sqrt(num.mean(resid**2)),num.max(resid)))
+        sys.stdout.flush()
+        return Yall
+
+
+    def __anchor_and_orient(self, anchor, demean=True, mirror=True, flip_z=False):
+        '''Fixes the absolute position of the cluster on a SINGLE reference
+        event (`anchor`, an index among the masters) and determines the
+        remaining degrees of freedom - azimuthal rotation about that event,
+        and the mirror ambiguity of the two-station geometry - by fitting the
+        observed ts-tp at ALL the selected stations simultaneously.
+
+        Meant to run after update_references or joint, where the masters are
+        no longer individually pinned to absolute coordinates: at that point
+        the only quantities still tied to absolute space are the position of
+        the anchor and the orientation that reproduces the observations.
+
+        demean    fit the pattern of ts-tp instead of its absolute value
+                  (recommended unless kv and the station elevations are
+                  trusted in an absolute sense).
+        mirror    also test the reflection of the horizontal plane.
+        flip_z    also test the reflection of the vertical axis.
+        '''
+        ntheta=721
+        Vp=(self.input).vp; Vs=(self.input).vs
+        kv=(Vp*Vs)/(Vp-Vs)
+        depthref=(self.input).origin[-1]
+        stalist=[sta for sta in (self.input).sel_sta if sta in (self.input).stations]
+        if len(stalist)==0:
+            sys.stdout.write(' Anchoring skipped: no station coordinates available\n')
+            return
+
+        evids=(self.input).events
+        obs={}; msk={}
+        for sta in stalist:
+            o=num.array([(self.input).data[ev][sta][-1]
+                         if sta in (self.input).data[ev] else num.nan for ev in evids])
+            obs[sta]=o
+            msk[sta]=num.isfinite(o)
+
+        X=num.copy(self.locations)
+        X[:,2]=X[:,2]+depthref
+        target=num.array((self.input).references[anchor], dtype=float)
+
+        def transform(my,mz,theta):
+            c=((X[:,0]-X[anchor,0])+1j*my*(X[:,1]-X[anchor,1]))*num.exp(-1j*theta)
+            Y=num.zeros(num.shape(X))
+            Y[:,0]=c.real+target[0]
+            Y[:,1]=c.imag+target[1]
+            Y[:,2]=mz*(X[:,2]-X[anchor,2])+target[2]
+            return Y
+
+        def misfit(Y):
+            num_=0.; den=0
+            for sta in stalist:
+                m=msk[sta]
+                s=(self.input).stations[sta]
+                d=num.sqrt((Y[m,0]-s[0])**2+(Y[m,1]-s[1])**2+(Y[m,2]-s[2])**2)
+                calc=d/kv; o=obs[sta][m]
+                if demean:
+                    calc=calc-num.mean(calc); o=o-num.mean(o)
+                num_+=num.sum((calc-o)**2); den+=num.size(o)
+            return num.sqrt(num_/den)
+
+        thetas=num.linspace(0,2*num.pi,ntheta)
+        best=(None,None,None,num.inf)
+        for my in ([1,-1] if mirror else [1]):
+            for mz in ([1,-1] if flip_z else [1]):
+                rms=num.array([misfit(transform(my,mz,t)) for t in thetas])
+                k=int(num.argmin(rms))
+                lo=thetas[max(k-1,0)]; hi=thetas[min(k+1,ntheta-1)]
+                fine=num.linspace(lo,hi,101)
+                rmsf=num.array([misfit(transform(my,mz,t)) for t in fine])
+                kf=int(num.argmin(rmsf))
+                sys.stdout.write(' Anchor fit: mirror_y %+d mirror_z %+d -> theta %6.1f deg, '
+                                 'rms %8.4f s\n'%(my,mz,num.degrees(fine[kf]),rmsf[kf]))
+                if rmsf[kf]<best[3]:
+                    best=(my,mz,fine[kf],rmsf[kf])
+        my,mz,theta,rms=best
+        self.locations=transform(my,mz,theta)
+        self.locations[:,2]=self.locations[:,2]-depthref
+        self.anchor_solution={'anchor':(self.input).events[anchor],'mirror_y':my,
+                              'mirror_z':mz,'theta_deg':num.degrees(theta),'rms':rms}
+        sys.stdout.write(' Cluster anchored on %s: mirror_y %+d, mirror_z %+d, '
+                         'theta %.1f deg, rms %.4f s\n'
+                         %((self.input).events[anchor],my,mz,num.degrees(theta),rms))
+        sys.stdout.flush()
 
     def __absolute_cluster_location(self,filename):
         #currently only search along strike is implemented
@@ -232,19 +393,75 @@ class hades_location:
 
 
     def __plot_results(self, filename):
-        c1='#4285F4'
-        c2='#EA4335'
-        c4='#34A853'
-        c3='#FBBC05'
-        nref=len((self.input).refevid)
-        fig=plt.figure(figsize=(10.0,15.0))
-        ax1=plt.subplot(111)
-        ax1.scatter(self.locations[nref:,0],self.locations[nref:,1], s=50, c=c1)
-        ax1.scatter(self.locations[0:nref,0],self.locations[0:nref:,1],s=50, c=c3)
+        c1 = '#4285F4'
+        c2 = '#EA4335'
+        c4 = '#34A853'
+        c3 = '#FBBC05'
+        nref = len((self.input).refevid)
+
+        # event coordinates
+        ex = self.locations[:, 0]
+        ey = self.locations[:, 1]
+        ez = self.locations[:, 2]
+
+        # station coordinates
+        stx, sty, stz = [], [], []
         for sta in (self.input).stations.keys():
-            station=(self.input).stations[sta]
-            ax1.scatter(station[0], station[1], c=c2, marker='v', s=200, zorder=3, linewidth=0.5)
-        ax1.grid('on')
-        ax1.set_aspect('equal')
-        fout=os.path.join(self.output_path,filename)
-        plt.savefig(fout+'.pdf')
+            station = (self.input).stations[sta]
+            stx.append(station[0])
+            sty.append(station[1])
+            stz.append(station[2])
+        stx = num.array(stx)
+        sty = num.array(sty)
+        stz = num.array(stz)
+
+        # common span for all axes -> identical, comparable panels
+        pad = 0.05
+        lims = []
+        for v in (ex,ey,ez):
+            lims.append((v.min(), v.max()))
+        span = max([b - a for a, b in lims])
+        span = span * (1.0 + 2.0 * pad) if span > 0 else 1.0
+        xlim, ylim, zlim = [(0.5 * (a + b) - 0.5 * span,
+                             0.5 * (a + b) + 0.5 * span) for a, b in lims]
+
+        fig = plt.figure(figsize=(12.0, 12.0))
+
+        # --- map view: X-Y ---
+        ax1 = plt.subplot(221)
+        ax1.scatter(ex[nref:], ey[nref:], s=50, c=c1)
+        ax1.scatter(ex[0:nref], ey[0:nref], s=50, c=c3)
+        ax1.scatter(stx, sty, c=c2, marker='v', s=200, zorder=3, linewidth=0.5)
+        ax1.set_xlim(xlim)
+        ax1.set_ylim(ylim)
+        ax1.set_xlabel('X')
+        ax1.set_ylabel('Y')
+
+        # --- cross-section: Z-Y (view from the side, depth on x) ---
+        ax2 = plt.subplot(222, sharey=ax1)
+        ax2.scatter(ez[nref:], ey[nref:], s=50, c=c1)
+        ax2.scatter(ez[0:nref], ey[0:nref], s=50, c=c3)
+        ax2.set_xlim(zlim)
+        ax2.set_ylim(ylim)
+        ax2.set_xlabel('Z')
+        ax2.set_ylabel('Y')
+
+        # --- cross-section: X-Z (depth on y) ---
+        ax3 = plt.subplot(223, sharex=ax1)
+        ax3.scatter(ex[nref:], ez[nref:], s=50, c=c1)
+        ax3.scatter(ex[0:nref], ez[0:nref], s=50, c=c3)
+        ax3.set_xlim(xlim)
+        ax3.set_ylim(zlim)
+        ax3.set_xlabel('X')
+        ax3.set_ylabel('Z')
+
+        for ax in (ax1, ax2, ax3):
+            ax.grid('on')
+            ax.set_aspect('equal', adjustable='box')
+
+        plt.subplot(224).axis('off')
+        fig.tight_layout()
+
+        fout = os.path.join(self.output_path, filename)
+        plt.savefig(fout + '.pdf')
+        plt.close(fig)

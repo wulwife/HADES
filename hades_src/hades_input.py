@@ -127,7 +127,7 @@ class hades_input:
             ie_dist=num.abs(tsp_ev1[sta][-1]-tsp_ev2[sta][-1])*kv
             return ie_dist
         else:
-            return num.NaN
+            return num.nan
 
 
     def __twosta_interev_distance(tsp_ev1,tsp_ev2,kv,sta):
@@ -140,7 +140,7 @@ class hades_input:
             ie_dist=num.sqrt(iedist_sta1**2+iedist_sta2**2)
             return ie_dist
         else:
-            return num.NaN
+            return num.nan
 
 
     def __multi_interev_distance(tsp_ev1,tsp_ev2,kv,sta,stations):
@@ -230,10 +230,10 @@ class hades_input:
 
         if len(self.refevid)>4:
             events=self.refevid[0:4]
-            references=self.references[0:4,:]
+            references=num.copy(self.references[0:4,:])  
         else:
             events=self.refevid
-            references=self.references
+            references=num.copy(self.references)   
 
         references[:,2]=references[:,2]-self.origin[-1]
         self.rel_references=references
